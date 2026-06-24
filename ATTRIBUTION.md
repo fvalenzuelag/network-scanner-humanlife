@@ -14,7 +14,7 @@ The following architectural concepts and technical approaches were derived from 
 - Fresnel zone geometry for distance estimation (Phase 2)
 - Reference to the pretrained 8 KB quantized pose model (`ruvnet/wifi-densepose-pretrained` on HuggingFace)
 
-**Repository**: https://github.com/fvalenzuelag/3d-human-detection-scanner
+**Repository**: https://github.com/fvalenzuelag/network-scanner-humanlife
 
 **All code in this repository is original work written from scratch.** No source files from RuView were copied or directly modified. The algorithms are based on peer-reviewed academic research on WiFi Channel State Information (CSI) sensing, which RuView also draws from.
 

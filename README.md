@@ -170,6 +170,6 @@ This project is inspired by [RuView](https://github.com/ruvnet/RuView) (MIT, Cop
 
 Fran Valenzuela — [f.valenzuela.garrido@gmail.com](mailto:f.valenzuela.garrido@gmail.com)
 
-GitHub: https://github.com/fvalenzuelag/3d-human-detection-scanner
+GitHub: https://github.com/fvalenzuelag/network-scanner-humanlife
 
 If you work in first response, building management, or deep tech investment and want to talk, reach out.

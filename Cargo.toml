@@ -13,8 +13,8 @@ edition     = "2021"
 license     = "MIT"
 authors     = ["Fran Valenzuela <f.valenzuela.garrido@gmail.com>"]
 description = "WiFi CSI people scanner with 3D visualization for first responders"
-repository  = "https://github.com/fvalenzuelag/3d-human-detection-scanner"
-homepage    = "https://github.com/fvalenzuelag/3d-human-detection-scanner"
+repository  = "https://github.com/fvalenzuelag/network-scanner-humanlife"
+homepage    = "https://github.com/fvalenzuelag/network-scanner-humanlife"
 keywords    = ["wifi", "csi", "iot", "esp32", "signal-processing"]
 categories  = ["science", "network-programming", "embedded"]
 
