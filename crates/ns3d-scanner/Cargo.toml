@@ -1,0 +1,22 @@
+[package]
+name        = "ns3d-scanner"
+description = "CLI scanner for first responders — Network-Scanner-3D"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "ns3d-scanner"
+path = "src/main.rs"
+
+[dependencies]
+ns3d-core   = { workspace = true }
+ns3d-signal = { workspace = true }
+
+tokio              = { workspace = true }
+serde_json         = { workspace = true }
+anyhow             = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap               = { workspace = true }

@@ -1,0 +1,16 @@
+[package]
+name        = "ns3d-signal"
+description = "CSI signal processing pipeline for Network-Scanner-3D"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+ns3d-core   = { workspace = true }
+rustfft     = { workspace = true }
+num-complex = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+thiserror   = { workspace = true }
+tracing     = { workspace = true }

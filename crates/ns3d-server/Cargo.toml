@@ -1,0 +1,27 @@
+[package]
+name        = "ns3d-server"
+description = "WebSocket sensing server for Network-Scanner-3D"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "ns3d-server"
+path = "src/main.rs"
+
+[dependencies]
+ns3d-core   = { workspace = true }
+ns3d-signal = { workspace = true }
+
+tokio            = { workspace = true }
+serde            = { workspace = true }
+serde_json       = { workspace = true }
+anyhow           = { workspace = true }
+tracing          = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap             = { workspace = true }
+
+axum       = { workspace = true }
+tower      = { workspace = true }
+tower-http = { workspace = true }

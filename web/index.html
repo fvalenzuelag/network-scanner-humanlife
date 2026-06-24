@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Scanner 3D</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#07090f; color:#00ff88; font-family:'Courier New',monospace; overflow:hidden; }
+
+#canvas { display:block; }
+
+/* ── HUD overlay ── */
+#hud { position:fixed; inset:0; pointer-events:none; }
+
+#header {
+  position:absolute; top:18px; left:50%; transform:translateX(-50%);
+  text-align:center;
+}
+#header h1 {
+  font-size:18px; letter-spacing:5px; color:#00ff88;
+  text-shadow:0 0 18px #00ff88, 0 0 40px #00ff8855;
+}
+#header .sub { font-size:10px; color:#006633; letter-spacing:3px; margin-top:3px; }
+
+/* connection dot */
+#status {
+  position:absolute; top:20px; right:18px;
+  display:flex; align-items:center; gap:8px; font-size:11px; color:#006633;
+}
+#dot {
+  width:9px; height:9px; border-radius:50%;
+  background:#330000; box-shadow:0 0 6px #330000;
+  transition:all .4s;
+}
+#dot.on { background:#00ff88; box-shadow:0 0 10px #00ff88; animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* person cards */
+#cards {
+  position:absolute; bottom:24px; left:18px;
+  display:flex; flex-direction:column; gap:8px; max-width:270px;
+}
+.card {
+  background:rgba(0,15,30,.88); border:1px solid #00ff88;
+  border-left:4px solid #00ff88; padding:9px 13px; border-radius:3px;
+  box-shadow:0 0 16px #00ff8811;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+.card .cid { font-size:12px; font-weight:bold; color:#00ff88; margin-bottom:4px; }
+.card .cv  { font-size:10px; color:#559977; margin-top:2px; display:flex; gap:12px; }
+.card .cv b { color:#00ffbb; }
+
+/* big count */
+#bigcount {
+  position:absolute; bottom:24px; right:18px;
+  text-align:right; line-height:1;
+}
+#bigcount .n {
+  font-size:52px; color:#00ff88;
+  text-shadow:0 0 30px #00ff88, 0 0 60px #00ff8844;
+}
+#bigcount .label { font-size:10px; color:#006633; letter-spacing:2px; margin-top:2px; }
+
+/* scan line */
+#scanline {
+  position:absolute; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent 0%,#00ff8833 40%,#00ff88 50%,#00ff8833 60%,transparent);
+  animation:scan 4s linear infinite; pointer-events:none;
+}
+@keyframes scan { 0%{top:-4px} 100%{top:100vh} }
+
+/* no-signal overlay */
+#nosig {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  text-align:center; display:none; color:#002211;
+}
+#nosig.show { display:block; }
+#nosig h2 { font-size:16px; margin-bottom:6px; }
+#nosig p  { font-size:11px; }
+
+/* help */
+#help {
+  position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+  font-size:10px; color:#002211;
+}
+
+/* zoom buttons */
+#zoom {
+  position:absolute; right:18px; top:50%; transform:translateY(-50%);
+  display:flex; flex-direction:column; gap:6px; pointer-events:all;
+}
+#zoom button {
+  width:32px; height:32px; background:rgba(0,20,10,.85);
+  border:1px solid #00ff4422; color:#00ff88; font-size:18px; line-height:1;
+  border-radius:4px; cursor:pointer; font-family:'Courier New',monospace;
+  transition:border-color .2s, box-shadow .2s;
+}
+#zoom button:hover { border-color:#00ff88; box-shadow:0 0 8px #00ff8844; }
+
+/* node labels — follow 3D projection */
+.node-label {
+  position:absolute; pointer-events:none;
+  font-size:9px; color:#4499ff; letter-spacing:1px;
+  text-shadow:0 0 6px #0066ff;
+  background:rgba(0,5,20,.75); border:1px solid #002266;
+  padding:2px 6px; border-radius:2px; white-space:nowrap;
+  transform:translate(-50%, -100%); margin-top:-6px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+  <div id="scanline"></div>
+
+  <div id="header">
+    <h1>⬡ NETWORK SCANNER 3D</h1>
+    <div class="sub">WiFi CSI · SPATIAL INTELLIGENCE · ESP32-S3-N16R8</div>
+  </div>
+
+  <div id="status">
+    <div id="dot"></div>
+    <span id="ws-label">DISCONNECTED</span>
+  </div>
+
+  <div id="cards"></div>
+
+  <div id="bigcount">
+    <div class="n" id="pcount">0</div>
+    <div class="label">PERSONS DETECTED</div>
+    <div class="label" id="ncount" style="margin-top:6px">0 NODES</div>
+  </div>
+
+  <div id="nosig">
+    <h2>[ AWAITING ESP32-S3 SIGNAL ]</h2>
+    <p>Run: <code style="color:#004422">ns3d-server --demo</code></p>
+    <p style="margin-top:6px;color:#003311">Demo mode active</p>
+  </div>
+
+  <div id="help">DRAG TO ORBIT &nbsp;·&nbsp; SCROLL / ± TO ZOOM &nbsp;·&nbsp; DOUBLE-CLICK TO RESET</div>
+
+  <div id="zoom">
+    <button id="zin"  title="Zoom in">+</button>
+    <button id="zout" title="Zoom out">−</button>
+  </div>
+
+  <div id="node-labels"></div>
+</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Renderer ──────────────────────────────────────────────────────────────────
+
+const canvas   = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x07090f);
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+scene.fog   = new THREE.FogExp2(0x07090f, 0.04);
+
+const W = () => window.innerWidth;
+const H = () => window.innerHeight;
+const camera = new THREE.PerspectiveCamera(48, W()/H(), 0.1, 200);
+camera.position.set(0, 14, 18);
+camera.lookAt(0, 0, 0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping  = true;
+controls.dampingFactor  = 0.06;
+controls.maxPolarAngle  = Math.PI / 2.05;
+controls.minDistance    = 4;
+controls.maxDistance    = 45;
+
+function resize() {
+  renderer.setSize(W(), H());
+  camera.aspect = W()/H();
+  camera.updateProjectionMatrix();
+}
+resize();
+window.addEventListener('resize', resize);
+
+canvas.addEventListener('dblclick', () => {
+  camera.position.set(0, 14, 18);
+  controls.target.set(0, 0, 0);
+});
+
+// ── Lights ────────────────────────────────────────────────────────────────────
+
+scene.add(new THREE.AmbientLight(0x001a0d, 1.2));
+const topL = new THREE.PointLight(0x00ff88, 0.6, 35);
+topL.position.set(0, 12, 0);
+scene.add(topL);
+
+// ── Room geometry ─────────────────────────────────────────────────────────────
+
+// Floor grid — brighter for contrast
+const grid = new THREE.GridHelper(16, 16, 0x00884444, 0x003322);
+scene.add(grid);
+
+// Floor plane
+const floorMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(16, 16),
+  new THREE.MeshBasicMaterial({ color:0x010f07, transparent:true, opacity:.8 })
+);
+floorMesh.rotation.x = -Math.PI / 2;
+floorMesh.position.y = -0.01;
+scene.add(floorMesh);
+
+// Solid wall edges for high contrast
+function wallEdge(points, color=0x00bb66) {
+  const geo = new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(...p)));
+  scene.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color })));
+}
+const RW=8, RD=6, RH=3;
+// Floor border
+wallEdge([[-RW/2,0,-RD/2],[RW/2,0,-RD/2],[RW/2,0,RD/2],[-RW/2,0,RD/2],[-RW/2,0,-RD/2]]);
+// Ceiling border
+wallEdge([[-RW/2,RH,-RD/2],[RW/2,RH,-RD/2],[RW/2,RH,RD/2],[-RW/2,RH,RD/2],[-RW/2,RH,-RD/2]], 0x006633);
+// Vertical corners
+[[-RW/2,-RD/2],[RW/2,-RD/2],[RW/2,RD/2],[-RW/2,RD/2]].forEach(([x,z])=>
+  wallEdge([[x,0,z],[x,RH,z]]));
+// Wireframe wall fill (slightly visible)
+function wireBox(w, h, d, x, y, z, color=0x005533, op=.35) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshBasicMaterial({ color, wireframe:true, transparent:true, opacity:op })
+  );
+  m.position.set(x, y, z);
+  scene.add(m);
+}
+wireBox(0.05, RH, RD,  -RW/2, RH/2, 0);
+wireBox(0.05, RH, RD,   RW/2, RH/2, 0);
+wireBox(RW,   RH, 0.05, 0, RH/2, -RD/2);
+wireBox(RW, 0.05, RD,   0, RH,    0, 0x004422, .2);
+
+// ── ESP32 node markers ────────────────────────────────────────────────────────
+
+const nodeLabelsEl = document.getElementById('node-labels');
+const nodeMeta = []; // { group, label3d, labelEl }
+
+function addNode(x, y, z, name='ESP32-S3 NODE 1') {
+  const g = new THREE.Group();
+  // Body
+  g.add(Object.assign(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(.14,.14,.06),
+      new THREE.MeshBasicMaterial({ color:0x2266ff })
+    )
+  ));
+  // Antenna
+  const ant = new THREE.Mesh(
+    new THREE.CylinderGeometry(.01,.01,.18,4),
+    new THREE.MeshBasicMaterial({ color:0x4488ff })
+  );
+  ant.position.set(.05,.16,0);
+  g.add(ant);
+  // WiFi rings (horizontal)
+  for (let r=1; r<=3; r++) {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(r*.28, r*.28+.025, 24),
+      new THREE.MeshBasicMaterial({ color:0x2255cc, transparent:true, opacity:.5-r*.1, side:THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI/2;
+    ring.userData.baseOp = .5 - r*.1;
+    ring.userData.phase  = r;
+    g.add(ring);
+  }
+  g.position.set(x, y, z);
+  scene.add(g);
+
+  // HTML label (projected from 3D)
+  const labelEl = document.createElement('div');
+  labelEl.className = 'node-label';
+  labelEl.textContent = name;
+  nodeLabelsEl.appendChild(labelEl);
+
+  // Helper vec for projection
+  const label3d = new THREE.Vector3(x, y + .25, z);
+  nodeMeta.push({ group:g, label3d, labelEl });
+  return g;
+}
+
+const nodes = [
+  addNode(-3.7, 2.5, -2.7),
+];
+
+// ── Person markers ────────────────────────────────────────────────────────────
+
+const COLORS = [0x00ff88, 0xff6600, 0xff00cc, 0x00ccff, 0xffcc00];
+const markers = new Map(); // person id → {group, torso, head, ring, aura, col}
+
+function mkMarker(id) {
+  const col  = COLORS[id % COLORS.length];
+  const g    = new THREE.Group();
+
+  function part(geom, px, py, pz, rx=0, ry=0, rz=0) {
+    const m = new THREE.Mesh(geom,
+      new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:.9 }));
+    m.position.set(px, py, pz);
+    m.rotation.set(rx, ry, rz);
+    g.add(m);
+    return m;
+  }
+
+  // ── Body ──────────────────────────────────────────────────────────────────
+  //  All Y values are "bottom-of-part" for clarity; geometry centers on 0.
+
+  // Head
+  const head  = part(new THREE.SphereGeometry(.18, 8, 8),       0, 1.63, 0);
+
+  // Neck
+                part(new THREE.CylinderGeometry(.06,.07,.12,6),  0, 1.46, 0);
+
+  // Torso (scale on breath)
+  const torso = part(new THREE.CylinderGeometry(.21,.23,.58,7),  0, 1.18, 0);
+
+  // Hips
+                part(new THREE.CylinderGeometry(.22,.18,.18,7),  0,  .80, 0);
+
+  // Upper arms (slight outward tilt)
+  part(new THREE.CylinderGeometry(.06,.05,.34,5),  .29,  .98, 0,  0, 0,  .42);
+  part(new THREE.CylinderGeometry(.06,.05,.34,5), -.29,  .98, 0,  0, 0, -.42);
+
+  // Forearms
+  part(new THREE.CylinderGeometry(.05,.04,.30,5),  .36,  .65, 0,  0, 0,  .55);
+  part(new THREE.CylinderGeometry(.05,.04,.30,5), -.36,  .65, 0,  0, 0, -.55);
+
+  // Thighs
+  part(new THREE.CylinderGeometry(.095,.08,.40,6),  .12, .52, 0);
+  part(new THREE.CylinderGeometry(.095,.08,.40,6), -.12, .52, 0);
+
+  // Shins
+  part(new THREE.CylinderGeometry(.07,.05,.38,6),  .12, .13, .02);
+  part(new THREE.CylinderGeometry(.07,.05,.38,6), -.12, .13, .02);
+
+  // Feet
+  part(new THREE.BoxGeometry(.12,.05,.22),  .12, .02,  .04);
+  part(new THREE.BoxGeometry(.12,.05,.22), -.12, .02,  .04);
+
+  // ── Aura glow ─────────────────────────────────────────────────────────────
+  const aura = new THREE.Mesh(
+    new THREE.SphereGeometry(.95, 12, 12),
+    new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:.06, side:THREE.BackSide })
+  );
+  aura.position.y = .9;
+  g.add(aura);
+
+  // ── Scan line (vertical sweep) ─────────────────────────────────────────────
+  const scanPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(.7, .05),
+    new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:.35, side:THREE.DoubleSide })
+  );
+  g.add(scanPlane);
+
+  // ── Floor ring ─────────────────────────────────────────────────────────────
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(.38, .46, 32),
+    new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:.5, side:THREE.DoubleSide })
+  );
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y  = .01;
+  g.add(ring);
+
+  scene.add(g);
+  return { group:g, head, torso, ring, aura, scanPlane, col };
+}
+
+// ── HUD refs ──────────────────────────────────────────────────────────────────
+
+const pcountEl = document.getElementById('pcount');
+const ncountEl = document.getElementById('ncount');
+const cardsEl  = document.getElementById('cards');
+const dot      = document.getElementById('dot');
+const wsLabel  = document.getElementById('ws-label');
+const nosig    = document.getElementById('nosig');
+
+function updateHUD(data) {
+  if (!data) return;
+
+  pcountEl.textContent = data.person_count ?? 0;
+  ncountEl.textContent = `${(data.node_ids||[]).length} NODES`;
+
+  // Cards — update in-place to avoid fadeIn flicker on every frame
+  const persons = data.persons || [];
+  const liveIds = new Set(persons.map(p => p.id));
+
+  // Remove cards for persons no longer present
+  for (const el of [...cardsEl.children]) {
+    if (!liveIds.has(Number(el.dataset.pid))) el.remove();
+  }
+
+  // Update or create cards
+  for (const p of persons) {
+    const br = p.vitals?.breathing_rate_bpm;
+    const hr = p.vitals?.heart_rate_bpm;
+    const ml = p.vitals?.motion_level ?? 0;
+    const pos = p.position ?? {x:0,y:0,z:0};
+    const posStr = (pos.x===0 && pos.z===0)
+      ? '<span style="color:#446644">EST. POS — 1 NODE</span>'
+      : `<span>x<b>${pos.x.toFixed(1)}</b> z<b>${pos.z.toFixed(1)}</b></span>`;
+    const inner = `
+      <div class="cid">⬡ PERSON ${p.id} &nbsp; ${p.alive ? '● ALIVE' : '○ DETECTING'}</div>
+      <div class="cv">
+        <span>🫁 <b>${br ? br.toFixed(1)+' bpm' : '—'}</b></span>
+        <span>💓 <b>${hr ? hr.toFixed(0)+' bpm' : '—'}</b></span>
+      </div>
+      <div class="cv">
+        <span>Motion <b>${(ml*100).toFixed(0)}%</b></span>
+        <span>Conf <b>${(p.confidence*100).toFixed(0)}%</b></span>
+      </div>
+      <div class="cv" style="margin-top:3px;font-size:9px">${posStr}</div>`;
+    let card = cardsEl.querySelector(`[data-pid="${p.id}"]`);
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.pid = p.id;
+      cardsEl.appendChild(card);
+    }
+    card.innerHTML = inner;
+  }
+
+  // 3-D markers
+  const live = new Set(persons.map(p => p.id));
+  for (const [id] of markers) {
+    if (!live.has(id)) { scene.remove(markers.get(id).group); markers.delete(id); }
+  }
+  persons.forEach((p, i) => {
+    if (!markers.has(p.id)) markers.set(p.id, mkMarker(p.id));
+    const m   = markers.get(p.id);
+    const pos = p.position ?? {x:0,y:0,z:0};
+    const nx  = (pos.x === 0 && pos.z === 0)
+               ? (i - (persons.length-1)/2) * 2.2
+               : pos.x;
+    m.group.position.set(nx, 0, pos.z);
+  });
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+
+let wsOk = false, lastData = 0, t = 0, lastHudUpdate = 0;
+
+function connect() {
+  const host = location.hostname || 'localhost';
+  const ws   = new WebSocket(`ws://${host}:3000/ws`);
+  ws.onopen  = () => { wsOk=true; dot.className='on'; wsLabel.textContent='CONNECTED'; nosig.classList.remove('show'); };
+  ws.onmessage = ev => {
+    try { const d=JSON.parse(ev.data); updateHUD(d); lastData=Date.now(); } catch{}
+  };
+  ws.onclose = ws.onerror = () => {
+    wsOk=false; dot.className=''; wsLabel.textContent='DISCONNECTED';
+    setTimeout(connect, 3000);
+  };
+}
+connect();
+
+// ── Zoom buttons ──────────────────────────────────────────────────────────────
+
+document.getElementById('zin').addEventListener('click', () => {
+  const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+  camera.position.addScaledVector(dir, 2);
+});
+document.getElementById('zout').addEventListener('click', () => {
+  const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+  camera.position.addScaledVector(dir, -2);
+});
+
+// ── Demo mode (when offline) ──────────────────────────────────────────────────
+
+function demoData(t) {
+  const persons = [];
+  const x1 = Math.sin(t*.4)*2.8, z1 = Math.cos(t*.25)*1.8;
+  persons.push({
+    id:1, position:{x:x1,y:0,z:z1},
+    vitals:{ breathing_rate_bpm:14+Math.sin(t*.1)*2, heart_rate_bpm:68+Math.sin(t*.07)*5, motion_level:.55+Math.sin(t)*.25 },
+    confidence:.91, last_seen_ms:Date.now(), alive:true
+  });
+  if (t > 4) {
+    persons.push({
+      id:2, position:{x:-1.6,y:0,z:-.4},
+      vitals:{ breathing_rate_bpm:12+Math.sin(t*.15), heart_rate_bpm:60+Math.sin(t*.06)*3, motion_level:.08+Math.abs(Math.sin(t*.4))*.1 },
+      confidence:.76, last_seen_ms:Date.now(), alive:true
+    });
+  }
+  return { timestamp_ms:Date.now(), person_count:persons.length, persons, node_ids:[1] };
+}
+
+// ── Animation ─────────────────────────────────────────────────────────────────
+
+const clock = new THREE.Clock();
+
+(function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  t += dt;
+  controls.update();
+
+  // Demo when no live data — throttle HUD to 5 Hz to prevent card flicker
+  if (!wsOk && Date.now()-lastData > 1500) {
+    nosig.classList.add('show');
+    const now = Date.now();
+    if (now - lastHudUpdate > 200) { updateHUD(demoData(t)); lastHudUpdate = now; }
+  }
+
+  // Animate person figures
+  for (const [, m] of markers) {
+    // Breathing: torso gently expands on X/Z
+    const breath = 1 + .04 * Math.sin(t * 2 * Math.PI * .25);
+    m.torso.scale.set(breath, 1, breath);
+    // Head slight bob
+    m.head.position.y = 1.63 + .015 * Math.sin(t * 2 * Math.PI * .25);
+    // Aura pulse
+    const ap = .5 + .5 * Math.abs(Math.sin(t * .8));
+    m.aura.material.opacity = .04 + .04 * ap;
+    m.aura.scale.setScalar(1 + .05 * ap);
+    // Floor ring pulse
+    const rp = Math.abs(Math.sin(t * 1.4));
+    m.ring.scale.setScalar(1 + .4 * rp);
+    m.ring.material.opacity = .5 - .4 * rp;
+    // Vertical scan line sweeps up the body
+    const sy = ((t * .7) % 1.8);
+    m.scanPlane.position.y  = sy;
+    m.scanPlane.material.opacity = .35 * (1 - sy / 1.8);
+  }
+
+  // Animate node WiFi rings + project labels to screen
+  const _v = new THREE.Vector3();
+  nodeMeta.forEach(({ group, label3d, labelEl }) => {
+    // Animate rings (children 2+)
+    group.children.slice(2).forEach(ring => {
+      if (!ring.userData.phase) return;
+      const rp = Math.abs(Math.sin(t*1.5 + ring.userData.phase));
+      ring.scale.setScalar(1 + .6*rp);
+      ring.material.opacity = (ring.userData.baseOp ?? .2) * (1 - rp*.6);
+    });
+    // Project 3D position → 2D screen
+    _v.copy(label3d).project(camera);
+    const sx = ( _v.x * .5 + .5) * W();
+    const sy = (-_v.y * .5 + .5) * H();
+    labelEl.style.left = sx + 'px';
+    labelEl.style.top  = sy + 'px';
+    labelEl.style.display = _v.z < 1 ? 'block' : 'none'; // hide if behind camera
+  });
+
+  // Gentle top-light pulse
+  topL.intensity = .5 + .1 * Math.sin(t*.5);
+
+  renderer.render(scene, camera);
+})();
+</script>
+</body>
+</html>

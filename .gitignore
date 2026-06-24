@@ -1,0 +1,48 @@
+# Rust / Cargo
+/target/
+**/target/
+debug/
+*.rs.bk
+*.pdb
+
+# ESP32 / embedded firmware build artifacts
+firmware/**/target/
+firmware/**/.embuild/
+firmware/**/build/
+*.bin
+*.elf
+*.map
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs and temp
+*.log
+tmp/
+*.tmp
+
+# Node / web (if tooling is added later)
+node_modules/
+dist/
+.cache/
+
+# Environment / secrets
+.env
+.env.local
+*.local
+
+# Publication files
+content/
+content/images/
+content/linkedin-post-es.md
+content/medium-article.md
+content/medium-article-es.md
+content/linkedin-post.md

@@ -1,0 +1,61 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ns3d-core",
+    "crates/ns3d-signal",
+    "crates/ns3d-server",
+    "crates/ns3d-scanner",
+]
+
+[workspace.package]
+version     = "0.1.0"
+edition     = "2021"
+license     = "MIT"
+authors     = ["Fran Valenzuela <f.valenzuela.garrido@gmail.com>"]
+description = "WiFi CSI people scanner with 3D visualization for first responders"
+repository  = "https://github.com/fvalenzuelag/3d-human-detection-scanner"
+homepage    = "https://github.com/fvalenzuelag/3d-human-detection-scanner"
+keywords    = ["wifi", "csi", "iot", "esp32", "signal-processing"]
+categories  = ["science", "network-programming", "embedded"]
+
+[workspace.dependencies]
+# Async
+tokio = { version = "1.35", features = ["full"] }
+
+# Serialization
+serde      = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow    = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Web server
+axum       = { version = "0.7", features = ["ws", "macros"] }
+tower      = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors"] }
+
+# Signal processing
+rustfft     = "6.1"
+num-complex = "0.4"
+
+# CLI
+clap = { version = "4.4", features = ["derive", "env"] }
+
+# Internal crates
+ns3d-core   = { path = "crates/ns3d-core" }
+ns3d-signal = { path = "crates/ns3d-signal" }
+
+[profile.release]
+lto           = true
+codegen-units = 1
+panic         = "abort"
+opt-level     = 3
+strip         = true
+
+[profile.dev]
+opt-level = 1

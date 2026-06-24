@@ -1,0 +1,30 @@
+# Network-Scanner-3D firmware defaults for ESP32-S3-N16R8
+# Compatible with ESP-IDF v5.3+ / v6.x
+# Apply with: idf.py build
+
+# Target: ESP32-S3
+CONFIG_IDF_TARGET="esp32s3"
+
+# CSI: enable raw 802.11 CSI capture
+CONFIG_ESP_WIFI_CSI_ENABLED=y
+
+# WiFi RX buffers — generous for high-rate CSI
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=64
+
+# Larger stack for CSI callback task
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
+
+# Disable power-save to minimise CSI latency
+CONFIG_PM_ENABLE=n
+CONFIG_ESP_WIFI_SLP_IRAM_OPT=n
+
+# SPIRAM disabled — CSI capture doesn't need it (fits in internal 512 KB SRAM)
+# The N16R8 has OPI PSRAM; enable later with CONFIG_SPIRAM_MODE_OCT=y if needed
+# CONFIG_SPIRAM is not set
+
+# FreeRTOS tick at 1 kHz
+CONFIG_FREERTOS_HZ=1000
+
+# Log level
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
