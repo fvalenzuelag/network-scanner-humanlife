@@ -46,3 +46,6 @@ content/linkedin-post-es.md
 content/medium-article.md
 content/medium-article-es.md
 content/linkedin-post.md
+*.jpg
+*.jpeg
+*.svg
